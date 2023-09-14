@@ -22,7 +22,7 @@
 <h1 class="title">Project <code>Words Translate</code></h1>
 <hr>
 <h3 class="title">Author: <code>Mikhail Chmir</code></h3>
-<h4 class="title">Release: <code>2023.09.v1</code></h4>
+<h4 class="title">Release: <code>2023.09.v2</code></h4>
 <h2 class="title">Module <code>main</code></h2>
 </header>
 <section id="section-intro">
@@ -30,52 +30,70 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from deep_translator import GoogleTranslator
+<pre><code class="python">import string
+from deep_translator import GoogleTranslator
 from mod.func import timed
 from re import match
+from functools import partial
 
 
-def translate_to_russian(word_eng: str) -&gt; str:
+def translate(word_eng, language):
     &#34;&#34;&#34;
-    Translation of a word from English to Russian
+    Translate a word from English to the target language
 
-    :param word_eng: English word
-    :return: Russian word
+    :param language: (str) Target language e.g. &#34;ru&#34; for Russian
+    :param word_eng: (str) English word
+    :return: (str) Translated word
     &#34;&#34;&#34;
-    translated = GoogleTranslator(source=&#39;auto&#39;, target=&#39;ru&#39;).translate(word_eng)
-    return translated
+    try:
+        if word_eng is None:
+            raise ValueError(&#34;The word to translate cannot be None&#34;)
+
+        translated = GoogleTranslator(source=&#39;auto&#39;, target=language).translate(word_eng)
+        return translated
+
+    except ValueError as ve:
+        print(f&#34;An error occurred: {ve}&#34;)
+        return None
+    except Exception as e:
+        print(f&#34;An unexpected error occurred: {e}&#34;)
+        return None
 
 
-def clear_word(word: str) -&gt; str:
+translate_into_russian = partial(translate, language=&#39;ru&#39;)
+
+
+def clear_word(word):
     &#34;&#34;&#34;
     Function for clearing words
 
-    We exclude words that:
-    - are shorter than 3 characters
-    - contain abbreviations in the form of apostrophes
-    - contain code signs (), _, etc.
-    - do not contain numbers
+    Clear the word of numbers and punctuation characters at the beginning and end of the word.
+    A clean word is a word that&#39;s
+        - is longer than 3 characters
+        - does not contain digits
+        - contains only ASCII characters
 
-    :return: Purified Word
+    :param word: (str) a word from the text
+    :return: (str) a clean word
     &#34;&#34;&#34;
-    word = word.strip(&#39;,.()_!?&#39;)
+    word = word.strip(string.digits)
+    word = word.strip(string.punctuation)
 
-    if len(word) &gt; 3 and word.isalpha() and all(
-            ch in &#39;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&#39; for ch in word) and all(
-            ch not in word for ch in [&#34;&#39;&#34;, &#39;’&#39;, &#39;(&#39;, &#39;)&#39;, &#39;_&#39;, &#39;.&#39;]):
+    if len(word) &gt; 3 and word.isalpha() and all(letter in string.ascii_letters for letter in word):
         return word
     else:
         # Exclude None
         return &#39;&#39;
 
 
-def create_unique_words_set() -&gt; set[str]:
+def create_unique_words_set():
     &#34;&#34;&#34;
-    Reads a file with text and forms a set of unique words.
+    Read a file with text and forms a set of unique words.
+
     All words are converted to lower case.
     The clear_word() function clears words.
 
-    :return: Set with words
+    :return: (set[str]) Set with words
     &#34;&#34;&#34;
     unique_words = set()
     with open(&#39;input.txt&#39;, &#39;r&#39;) as infile:
@@ -86,45 +104,32 @@ def create_unique_words_set() -&gt; set[str]:
     return unique_words
 
 
-def write_words_to_file(flag_translate: bool, unique_words_set: set) -&gt; None:
+@timed
+def main_with_translate(flag_translate=True, unique_words_set=None):
     &#34;&#34;&#34;
-    Creating a file with unique words
+    Save unique words and (optionally) their translations to a new file
 
-    :param flag_translate: To use translation or not
-    :param unique_words_set: Set with words
+    :param flag_translate: (bool) use translation if True
+    :param unique_words_set: (set) unique words
     :return: None
     &#34;&#34;&#34;
-    # Recording unique words and their translations(or not) into a new file
+    if unique_words_set is None:
+        unique_words_set = create_unique_words_set()
     with open(&#39;output.txt&#39;, &#39;w&#39;) as outfile:
-        outfile.write(&#39;words count: &#39; + str(len(unique_words_set)) + &#39;\n&#39;)
+        outfile.write(f&#34;words count: {str(len(unique_words_set))}\n&#34;)
         for word in unique_words_set:
             if len(word) &gt; 3:
                 if flag_translate:
-                    translated_word = translate_to_russian(word)
-                    # print(f&#34;{word} - {translated_word}\n&#34;)
-                    outfile.write(f&#34;{word} - {translated_word}\n&#34;)
+                    translated_word = translate_into_russian(word_eng=word)
+                    outfile.write(f&#34;{word} - {translated_word} \n&#34;)
                 else:
                     outfile.write(f&#34;{word} \n&#34;)
 
 
 @timed
-def main_with_translate() -&gt; None:
-    &#34;&#34;&#34;
-    Reading the source file and creating a list of unique words with translation.
-
-    :return: None
-    &#34;&#34;&#34;
-    write_words_to_file(True, create_unique_words_set())
-
-
-@timed
-def main_without_translate() -&gt; None:
-    &#34;&#34;&#34;
-    Reading the source file and creating a list of unique words without translation.
-
-    :return: None
-    &#34;&#34;&#34;
-    write_words_to_file(False, create_unique_words_set())
+def main_without_translate(*args, **kwargs):
+    &#34;&#34;&#34;Saves unique words without translations to a new file&#34;&#34;&#34;
+    return main_with_translate(*args, flag_translate=False, **kwargs)
 
 
 if __name__ == &#34;__main__&#34;:
@@ -144,37 +149,38 @@ if __name__ == &#34;__main__&#34;:
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="main.clear_word"><code class="name flex">
-<span>def <span class="ident">clear_word</span></span>(<span>word: str) ‑> str</span>
+<span>def <span class="ident">clear_word</span></span>(<span>word)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for clearing words</p>
-<p>We exclude words that:
-- are shorter than 3 characters
-- contain abbreviations in the form of apostrophes
-- contain code signs (), _, etc.
-- do not contain numbers</p>
-<p>:return: Purified Word</p></div>
+<p>Clear the word of numbers and punctuation characters at the beginning and end of the word.<br>
+A clean word is a word that's<br>
+- is longer than 3 characters<br>
+- does not contain digits<br>
+- contains only ASCII characters</p>
+<p>:param word: (str) a word from the text
+:return: (str) a clean word</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def clear_word(word: str) -&gt; str:
+<pre><code class="python">def clear_word(word):
     &#34;&#34;&#34;
     Function for clearing words
 
-    We exclude words that:
-    - are shorter than 3 characters
-    - contain abbreviations in the form of apostrophes
-    - contain code signs (), _, etc.
-    - do not contain numbers
+    Clear the word of numbers and punctuation characters at the beginning and end of the word.
+    A clean word is a word that&#39;s
+        - is longer than 3 characters
+        - does not contain digits
+        - contains only ASCII characters
 
-    :return: Purified Word
+    :param word: (str) a word from the text
+    :return: (str) a clean word
     &#34;&#34;&#34;
-    word = word.strip(&#39;,.()_!?&#39;)
+    word = word.strip(string.digits)
+    word = word.strip(string.punctuation)
 
-    if len(word) &gt; 3 and word.isalpha() and all(
-            ch in &#39;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&#39; for ch in word) and all(
-            ch not in word for ch in [&#34;&#39;&#34;, &#39;’&#39;, &#39;(&#39;, &#39;)&#39;, &#39;_&#39;, &#39;.&#39;]):
+    if len(word) &gt; 3 and word.isalpha() and all(letter in string.ascii_letters for letter in word):
         return word
     else:
         # Exclude None
@@ -182,24 +188,25 @@ if __name__ == &#34;__main__&#34;:
 </details>
 </dd>
 <dt id="main.create_unique_words_set"><code class="name flex">
-<span>def <span class="ident">create_unique_words_set</span></span>(<span>) ‑> set[str]</span>
+<span>def <span class="ident">create_unique_words_set</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Reads a file with text and forms a set of unique words.
-All words are converted to lower case.
+<div class="desc"><p>Read a file with text and forms a set of unique words.</p>
+<p>All words are converted to lower case.<br>
 The clear_word() function clears words.</p>
-<p>:return: Set with words</p></div>
+<p>:return: (set[str]) Set with words</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def create_unique_words_set() -&gt; set[str]:
+<pre><code class="python">def create_unique_words_set():
     &#34;&#34;&#34;
-    Reads a file with text and forms a set of unique words.
+    Read a file with text and forms a set of unique words.
+
     All words are converted to lower case.
     The clear_word() function clears words.
 
-    :return: Set with words
+    :return: (set[str]) Set with words
     &#34;&#34;&#34;
     unique_words = set()
     with open(&#39;input.txt&#39;, &#39;r&#39;) as infile:
@@ -211,98 +218,87 @@ The clear_word() function clears words.</p>
 </details>
 </dd>
 <dt id="main.main_with_translate"><code class="name flex">
-<span>def <span class="ident">main_with_translate</span></span>(<span>) ‑> None</span>
+<span>def <span class="ident">main_with_translate</span></span>(<span>flag_translate=True, unique_words_set=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Reading the source file and creating a list of unique words with translation.</p>
-<p>:return: None</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@timed
-def main_with_translate() -&gt; None:
-    &#34;&#34;&#34;
-    Reading the source file and creating a list of unique words with translation.
-
-    :return: None
-    &#34;&#34;&#34;
-    write_words_to_file(True, create_unique_words_set())</code></pre>
-</details>
-</dd>
-<dt id="main.main_without_translate"><code class="name flex">
-<span>def <span class="ident">main_without_translate</span></span>(<span>) ‑> None</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Reading the source file and creating a list of unique words without translation.</p>
-<p>:return: None</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@timed
-def main_without_translate() -&gt; None:
-    &#34;&#34;&#34;
-    Reading the source file and creating a list of unique words without translation.
-
-    :return: None
-    &#34;&#34;&#34;
-    write_words_to_file(False, create_unique_words_set())</code></pre>
-</details>
-</dd>
-<dt id="main.translate_to_russian"><code class="name flex">
-<span>def <span class="ident">translate_to_russian</span></span>(<span>word_eng: str) ‑> str</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Translation of a word from English to Russian</p>
-<p>:param word_eng: English word
-:return: Russian word</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def translate_to_russian(word_eng: str) -&gt; str:
-    &#34;&#34;&#34;
-    Translation of a word from English to Russian
-
-    :param word_eng: English word
-    :return: Russian word
-    &#34;&#34;&#34;
-    translated = GoogleTranslator(source=&#39;auto&#39;, target=&#39;ru&#39;).translate(word_eng)
-    return translated</code></pre>
-</details>
-</dd>
-<dt id="main.write_words_to_file"><code class="name flex">
-<span>def <span class="ident">write_words_to_file</span></span>(<span>flag_translate: bool, unique_words_set: set) ‑> None</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Creating a file with unique words</p>
-<p>:param flag_translate: To use translation or not
-:param unique_words_set: Set with words
+<div class="desc"><p>Save unique words and (optionally) their translations to a new file</p>
+<p>:param flag_translate: (bool) use translation if True<br>
+:param unique_words_set: (set) unique words<br>
 :return: None</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def write_words_to_file(flag_translate: bool, unique_words_set: set) -&gt; None:
+<pre><code class="python">@timed
+def main_with_translate(flag_translate=True, unique_words_set=None):
     &#34;&#34;&#34;
-    Creating a file with unique words
+    Save unique words and (optionally) their translations to a new file
 
-    :param flag_translate: To use translation or not
-    :param unique_words_set: Set with words
+    :param flag_translate: (bool) use translation if True
+    :param unique_words_set: (set) unique words
     :return: None
     &#34;&#34;&#34;
-    # Recording unique words and their translations(or not) into a new file
+    if unique_words_set is None:
+        unique_words_set = create_unique_words_set()
     with open(&#39;output.txt&#39;, &#39;w&#39;) as outfile:
-        outfile.write(&#39;words count: &#39; + str(len(unique_words_set)) + &#39;\n&#39;)
+        outfile.write(f&#34;words count: {str(len(unique_words_set))}\n&#34;)
         for word in unique_words_set:
             if len(word) &gt; 3:
                 if flag_translate:
-                    translated_word = translate_to_russian(word)
-                    # print(f&#34;{word} - {translated_word}\n&#34;)
-                    outfile.write(f&#34;{word} - {translated_word}\n&#34;)
+                    translated_word = translate_into_russian(word_eng=word)
+                    outfile.write(f&#34;{word} - {translated_word} \n&#34;)
                 else:
                     outfile.write(f&#34;{word} \n&#34;)</code></pre>
+</details>
+</dd>
+<dt id="main.main_without_translate"><code class="name flex">
+<span>def <span class="ident">main_without_translate</span></span>(<span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Saves unique words without translations to a new file</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@timed
+def main_without_translate(*args, **kwargs):
+    &#34;&#34;&#34;Saves unique words without translations to a new file&#34;&#34;&#34;
+    return main_with_translate(*args, flag_translate=False, **kwargs)</code></pre>
+</details>
+</dd>
+<dt id="main.translate"><code class="name flex">
+<span>def <span class="ident">translate</span></span>(<span>word_eng, language)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Translate a word from English to the target language</p>
+<p>:param language: (str) Target language e.g. "ru" for Russian<br>
+:param word_eng: (str) English word<br>
+:return: (str) Translated word</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def translate(word_eng, language):
+    &#34;&#34;&#34;
+    Translate a word from English to the target language
+
+    :param language: (str) Target language e.g. &#34;ru&#34; for Russian
+    :param word_eng: (str) English word
+    :return: (str) Translated word
+    &#34;&#34;&#34;
+    try:
+        if word_eng is None:
+            raise ValueError(&#34;The word to translate cannot be None&#34;)
+
+        translated = GoogleTranslator(source=&#39;auto&#39;, target=language).translate(word_eng)
+        return translated
+
+    except ValueError as ve:
+        print(f&#34;An error occurred: {ve}&#34;)
+        return None
+    except Exception as e:
+        print(f&#34;An unexpected error occurred: {e}&#34;)
+        return None</code></pre>
 </details>
 </dd>
 </dl>
@@ -322,8 +318,7 @@ def main_without_translate() -&gt; None:
 <li><code><a title="main.create_unique_words_set" href="#main.create_unique_words_set">create_unique_words_set</a></code></li>
 <li><code><a title="main.main_with_translate" href="#main.main_with_translate">main_with_translate</a></code></li>
 <li><code><a title="main.main_without_translate" href="#main.main_without_translate">main_without_translate</a></code></li>
-<li><code><a title="main.translate_to_russian" href="#main.translate_to_russian">translate_to_russian</a></code></li>
-<li><code><a title="main.write_words_to_file" href="#main.write_words_to_file">write_words_to_file</a></code></li>
+<li><code><a title="main.translate" href="#main.translate">translate</a></code></li>
 </ul>
 </li>
 </ul>

@@ -1,49 +1,67 @@
+import string
 from deep_translator import GoogleTranslator
 from mod.func import timed
 from re import match
+from functools import partial
 
 
-def translate_to_russian(word_eng: str) -> str:
+def translate(word_eng, language):
     """
-    Translation of a word from English to Russian
+    Translate a word from English to the target language
 
-    :param word_eng: English word
-    :return: Russian word
+    :param language: (str) Target language e.g. "ru" for Russian
+    :param word_eng: (str) English word
+    :return: (str) Translated word
     """
-    translated = GoogleTranslator(source='auto', target='ru').translate(word_eng)
-    return translated
+    try:
+        if word_eng is None:
+            raise ValueError("The word to translate cannot be None")
+
+        translated = GoogleTranslator(source='auto', target=language).translate(word_eng)
+        return translated
+
+    except ValueError as ve:
+        print(f"An error occurred: {ve}")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 
-def clear_word(word: str) -> str:
+translate_into_russian = partial(translate, language='ru')
+
+
+def clear_word(word):
     """
     Function for clearing words
 
-    We exclude words that:
-    - are shorter than 3 characters
-    - contain abbreviations in the form of apostrophes
-    - contain code signs (), _, etc.
-    - do not contain numbers
+    Clear the word of numbers and punctuation characters at the beginning and end of the word.
+    A clean word is a word that's
+        - is longer than 3 characters
+        - does not contain digits
+        - contains only ASCII characters
 
-    :return: Purified Word
+    :param word: (str) a word from the text
+    :return: (str) a clean word
     """
-    word = word.strip(',.()_!?')
+    word = word.strip(string.digits)
+    word = word.strip(string.punctuation)
 
-    if len(word) > 3 and word.isalpha() and all(
-            ch in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' for ch in word) and all(
-            ch not in word for ch in ["'", '’', '(', ')', '_', '.']):
+    if len(word) > 3 and word.isalpha() and all(letter in string.ascii_letters for letter in word):
         return word
     else:
         # Exclude None
         return ''
 
 
-def create_unique_words_set() -> set[str]:
+def create_unique_words_set():
     """
-    Reads a file with text and forms a set of unique words.
+    Read a file with text and forms a set of unique words.
+
     All words are converted to lower case.
     The clear_word() function clears words.
 
-    :return: Set with words
+    :return: (set[str]) Set with words
     """
     unique_words = set()
     with open('input.txt', 'r') as infile:
@@ -54,45 +72,32 @@ def create_unique_words_set() -> set[str]:
     return unique_words
 
 
-def write_words_to_file(flag_translate: bool, unique_words_set: set) -> None:
+@timed
+def main_with_translate(flag_translate=True, unique_words_set=None):
     """
-    Creating a file with unique words
+    Save unique words and (optionally) their translations to a new file
 
-    :param flag_translate: To use translation or not
-    :param unique_words_set: Set with words
+    :param flag_translate: (bool) use translation if True
+    :param unique_words_set: (set) unique words
     :return: None
     """
-    # Recording unique words and their translations(or not) into a new file
+    if unique_words_set is None:
+        unique_words_set = create_unique_words_set()
     with open('output.txt', 'w') as outfile:
-        outfile.write('words count: ' + str(len(unique_words_set)) + '\n')
+        outfile.write(f"words count: {str(len(unique_words_set))}\n")
         for word in unique_words_set:
             if len(word) > 3:
                 if flag_translate:
-                    translated_word = translate_to_russian(word)
-                    # print(f"{word} - {translated_word}\n")
-                    outfile.write(f"{word} - {translated_word}\n")
+                    translated_word = translate_into_russian(word_eng=word)
+                    outfile.write(f"{word} - {translated_word} \n")
                 else:
                     outfile.write(f"{word} \n")
 
 
 @timed
-def main_with_translate() -> None:
-    """
-    Reading the source file and creating a list of unique words with translation.
-
-    :return: None
-    """
-    write_words_to_file(True, create_unique_words_set())
-
-
-@timed
-def main_without_translate() -> None:
-    """
-    Reading the source file and creating a list of unique words without translation.
-
-    :return: None
-    """
-    write_words_to_file(False, create_unique_words_set())
+def main_without_translate(*args, **kwargs):
+    """Saves unique words without translations to a new file"""
+    return main_with_translate(*args, flag_translate=False, **kwargs)
 
 
 if __name__ == "__main__":

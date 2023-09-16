@@ -1,4 +1,4 @@
-(eng)------------------------------------------------------------------------------------------------------
+(en)------------------------------------------------------------------------------------------------------
 
 Project "Forming unique words from text"
  + translation of words from English to Russian
@@ -17,21 +17,21 @@ When running the py-file, the user is asked to:
 
 To deploy the project:
 	1. Create a working environment
-	   
+
 	   python3 -m venv venv          (Linux/MacOS)
 	   python -m venv venv           (Windows)
-	   
+
 	2 Activate ENV
 
 	   source venv/bin/activate      (Linux/macOS)
-	   .\venv\Scripts\Activate       (Windows) 
+	   .\venv\Scripts\Activate       (Windows)
 
 	3. Download the required libraries
 
-	   pip install -r requirements.txt   
+	   pip install -r requirements.txt
 
 
-(rus)------------------------------------------------------------------------------------------------------
+(ru)------------------------------------------------------------------------------------------------------
 
 Проект "Формирование уникальных слов из текста"
  + перевод слов с английского на русский
@@ -50,17 +50,16 @@ python 3.11.5
 
 Равернуть проект:
 1. Создать рабочую среду
-   
+
    python3 -m venv venv (Linux/MacOS)
    python -m venv venv (Windows)
-   
+
 2. Активировать ENV
 
    source venv/bin/activate  (Linux/macOS)
 
-   .\venv\Scripts\Activate (Windows) 
+   .\venv\Scripts\Activate (Windows)
 
 3. Подгрузить необходимые библиотеки
 
-   pip install -r requirements.txt   
-   
+   pip install -r requirements.txt

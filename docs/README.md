@@ -11,4 +11,4 @@ The first line of the output file contains the number of unique words, excluding
 
 # Acknowledgements
 
-Many thanks to **Peter Fison** and **Jacek Skrzypacz** for their helpful comments and code review..
+Many thanks to **Peter Fison** and **Jacek Skrzypacz** for their helpful comments and code review.

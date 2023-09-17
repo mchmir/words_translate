@@ -9,6 +9,16 @@ When forming unique words, the word is not brought to its fundamental basis(lemm
 If you don't need translation of words, the text will be analyzed, and a file of unique words will be generated.
 The first line of the output file contains the number of unique words, excluding prepositions, articles, and code patterns.
 
+# Constraints
+
+```python
+pip install deep_translator
+pip install pdoc3
+
+# Create documentation
+pdoc --html main.py -o ./docs -f
+```
+
 # Acknowledgements
 
 Many thanks to **Peter Fison** and **Jacek Skrzypacz** for their helpful comments and code review.

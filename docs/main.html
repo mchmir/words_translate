@@ -22,7 +22,7 @@
 <h1 class="title">Project <code>Words Translate</code></h1>
 <hr>
 <h3 class="title">Author: <code>Mikhail Chmir</code></h3>
-<h4 class="title">Release: <code>2023.09.v2</code></h4>
+<h4 class="title">Release: <code>2023.09.v3</code></h4>
 <h2 class="title">Module <code>main</code></h2>
 </header>
 <section id="section-intro">
@@ -31,10 +31,27 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import string
-from deep_translator import GoogleTranslator
-from mod.func import timed
+
+from functools import partial, wraps
 from re import match
-from functools import partial
+from time import perf_counter
+from deep_translator import GoogleTranslator
+
+
+def timed(func):
+    &#34;&#34;&#34;
+    (ru) Функция декоратор, которая при вызове декорируемой функции измеряет время ее выполнения
+    (en) Decorator which measures the execution time of the wrapped function
+    &#34;&#34;&#34;
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        t1 = perf_counter()
+        result = func(*args, **kwargs)
+        t2 = perf_counter()
+        print(f&#34;Calling {func.__name__} took {t2-t1} second, &#34;, end=&#34;&#34;)
+        print(f&#34;(with parameters {args}, {kwargs})&#34;)
+        return result
+    return wrap
 
 
 def translate(word_eng, language):
@@ -48,16 +65,14 @@ def translate(word_eng, language):
     try:
         if word_eng is None:
             raise ValueError(&#34;The word to translate cannot be None&#34;)
-
         translated = GoogleTranslator(source=&#39;auto&#39;, target=language).translate(word_eng)
         return translated
-
     except ValueError as ve:
         print(f&#34;An error occurred: {ve}&#34;)
-        return None
+        return
     except Exception as e:
         print(f&#34;An unexpected error occurred: {e}&#34;)
-        return None
+        return
 
 
 translate_into_russian = partial(translate, language=&#39;ru&#39;)
@@ -65,43 +80,41 @@ translate_into_russian = partial(translate, language=&#39;ru&#39;)
 
 def clear_word(word):
     &#34;&#34;&#34;
-    Function for clearing words
-
     Clear the word of numbers and punctuation characters at the beginning and end of the word.
-    A clean word is a word that&#39;s
-        - is longer than 3 characters
-        - does not contain digits
-        - contains only ASCII characters
+
+    A clean word:
+      - is longer than 3 characters
+      - does not contain digits
+      - contains only ASCII characters
 
     :param word: (str) a word from the text
     :return: (str) a clean word
     &#34;&#34;&#34;
-    word = word.strip(string.digits)
-    word = word.strip(string.punctuation)
-
-    if len(word) &gt; 3 and word.isalpha() and all(letter in string.ascii_letters for letter in word):
+    word = word.strip(string.digits).strip(string.punctuation)
+    if all(
+        len(word) &gt; 3,
+        word.isalpha(),
+        all(letter in string.ascii_letters for letter in word)
+    ):
         return word
-    else:
-        # Exclude None
-        return &#39;&#39;
 
 
 def create_unique_words_set():
     &#34;&#34;&#34;
-    Read a file with text and forms a set of unique words.
+    Load a text file and create a set of unique words.
 
-    All words are converted to lower case.
-    The clear_word() function clears words.
+    Convert all words to lower case.
+    Clear words with clear_word().
 
     :return: (set[str]) Set with words
     &#34;&#34;&#34;
     unique_words = set()
     with open(&#39;input.txt&#39;, &#39;r&#39;) as infile:
         for line in infile:
-            words = line.strip().split()
-            # &#34;set comprehensions&#34;
-            unique_words.update(clear_word(word.lower()) for word in words)
-    return unique_words
+            unique_words.update(
+                clear_word(word.lower()) for word in line.strip().split()
+            )
+    return {word for word in unique_words if word}
 
 
 @timed
@@ -116,7 +129,7 @@ def main_with_translate(flag_translate=True, unique_words_set=None):
     if unique_words_set is None:
         unique_words_set = create_unique_words_set()
     with open(&#39;output.txt&#39;, &#39;w&#39;) as outfile:
-        outfile.write(f&#34;words count: {str(len(unique_words_set))}\n&#34;)
+        outfile.write(f&#34;Word count: {str(len(unique_words_set))}\n&#34;)
         for word in unique_words_set:
             if len(word) &gt; 3:
                 if flag_translate:
@@ -126,15 +139,16 @@ def main_with_translate(flag_translate=True, unique_words_set=None):
                     outfile.write(f&#34;{word} \n&#34;)
 
 
-@timed
-def main_without_translate(*args, **kwargs):
-    &#34;&#34;&#34;Saves unique words without translations to a new file&#34;&#34;&#34;
-    return main_with_translate(*args, flag_translate=False, **kwargs)
+def main_without_translate(unique_words_set=None):
+    &#34;&#34;&#34;Save unique words without translations to a new file&#34;&#34;&#34;
+    return main_with_translate(
+        flag_translate=False,
+        unique_words_set=unique_words_set
+    )
 
 
 if __name__ == &#34;__main__&#34;:
-
-    response = input(&#39;Do you want to use word translations? [Y/N]:&#39;)
+    response = input(&#39;Do you want to use word translations? [Y/N]: &#39;)
     if match(&#34;[yYдД]&#34;, response):
         main_with_translate()
     else:
@@ -152,13 +166,12 @@ if __name__ == &#34;__main__&#34;:
 <span>def <span class="ident">clear_word</span></span>(<span>word)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Function for clearing words</p>
-<p>Clear the word of numbers and punctuation characters at the beginning and end of the word.<br>
-A clean word is a word that's<br>
+<div class="desc"><p>Clear the word of numbers and punctuation characters at the beginning and end of the word.</p>
+<p>A clean word:<br>
 - is longer than 3 characters<br>
 - does not contain digits<br>
 - contains only ASCII characters</p>
-<p>:param word: (str) a word from the text
+<p>:param word: (str) a word from the text<br>
 :return: (str) a clean word</p></div>
 <details class="source">
 <summary>
@@ -166,34 +179,32 @@ A clean word is a word that's<br>
 </summary>
 <pre><code class="python">def clear_word(word):
     &#34;&#34;&#34;
-    Function for clearing words
-
     Clear the word of numbers and punctuation characters at the beginning and end of the word.
-    A clean word is a word that&#39;s
-        - is longer than 3 characters
-        - does not contain digits
-        - contains only ASCII characters
+
+    A clean word:
+      - is longer than 3 characters
+      - does not contain digits
+      - contains only ASCII characters
 
     :param word: (str) a word from the text
     :return: (str) a clean word
     &#34;&#34;&#34;
-    word = word.strip(string.digits)
-    word = word.strip(string.punctuation)
-
-    if len(word) &gt; 3 and word.isalpha() and all(letter in string.ascii_letters for letter in word):
-        return word
-    else:
-        # Exclude None
-        return &#39;&#39;</code></pre>
+    word = word.strip(string.digits).strip(string.punctuation)
+    if all(
+        len(word) &gt; 3,
+        word.isalpha(),
+        all(letter in string.ascii_letters for letter in word)
+    ):
+        return word</code></pre>
 </details>
 </dd>
 <dt id="main.create_unique_words_set"><code class="name flex">
 <span>def <span class="ident">create_unique_words_set</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Read a file with text and forms a set of unique words.</p>
-<p>All words are converted to lower case.<br>
-The clear_word() function clears words.</p>
+<div class="desc"><p>Load a text file and create a set of unique words.</p>
+<p>Convert all words to lower case.<br>
+Clear words with clear_word().</p>
 <p>:return: (set[str]) Set with words</p></div>
 <details class="source">
 <summary>
@@ -201,20 +212,20 @@ The clear_word() function clears words.</p>
 </summary>
 <pre><code class="python">def create_unique_words_set():
     &#34;&#34;&#34;
-    Read a file with text and forms a set of unique words.
+    Load a text file and create a set of unique words.
 
-    All words are converted to lower case.
-    The clear_word() function clears words.
+    Convert all words to lower case.
+    Clear words with clear_word().
 
     :return: (set[str]) Set with words
     &#34;&#34;&#34;
     unique_words = set()
     with open(&#39;input.txt&#39;, &#39;r&#39;) as infile:
         for line in infile:
-            words = line.strip().split()
-            # &#34;set comprehensions&#34;
-            unique_words.update(clear_word(word.lower()) for word in words)
-    return unique_words</code></pre>
+            unique_words.update(
+                clear_word(word.lower()) for word in line.strip().split()
+            )
+    return {word for word in unique_words if word}</code></pre>
 </details>
 </dd>
 <dt id="main.main_with_translate"><code class="name flex">
@@ -241,7 +252,7 @@ def main_with_translate(flag_translate=True, unique_words_set=None):
     if unique_words_set is None:
         unique_words_set = create_unique_words_set()
     with open(&#39;output.txt&#39;, &#39;w&#39;) as outfile:
-        outfile.write(f&#34;words count: {str(len(unique_words_set))}\n&#34;)
+        outfile.write(f&#34;Word count: {str(len(unique_words_set))}\n&#34;)
         for word in unique_words_set:
             if len(word) &gt; 3:
                 if flag_translate:
@@ -252,18 +263,46 @@ def main_with_translate(flag_translate=True, unique_words_set=None):
 </details>
 </dd>
 <dt id="main.main_without_translate"><code class="name flex">
-<span>def <span class="ident">main_without_translate</span></span>(<span>*args, **kwargs)</span>
+<span>def <span class="ident">main_without_translate</span></span>(<span>unique_words_set=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Saves unique words without translations to a new file</p></div>
+<div class="desc"><p>Save unique words without translations to a new file</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@timed
-def main_without_translate(*args, **kwargs):
-    &#34;&#34;&#34;Saves unique words without translations to a new file&#34;&#34;&#34;
-    return main_with_translate(*args, flag_translate=False, **kwargs)</code></pre>
+<pre><code class="python">def main_without_translate(unique_words_set=None):
+    &#34;&#34;&#34;Save unique words without translations to a new file&#34;&#34;&#34;
+    return main_with_translate(
+        flag_translate=False,
+        unique_words_set=unique_words_set
+    )</code></pre>
+</details>
+</dd>
+<dt id="main.timed"><code class="name flex">
+<span>def <span class="ident">timed</span></span>(<span>func)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>(ru) Функция декоратор, которая при вызове декорируемой функции измеряет время ее выполнения<br>
+(en) Decorator which measures the execution time of the wrapped function</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def timed(func):
+    &#34;&#34;&#34;
+    (ru) Функция декоратор, которая при вызове декорируемой функции измеряет время ее выполнения
+    (en) Decorator which measures the execution time of the wrapped function
+    &#34;&#34;&#34;
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        t1 = perf_counter()
+        result = func(*args, **kwargs)
+        t2 = perf_counter()
+        print(f&#34;Calling {func.__name__} took {t2-t1} second, &#34;, end=&#34;&#34;)
+        print(f&#34;(with parameters {args}, {kwargs})&#34;)
+        return result
+    return wrap</code></pre>
 </details>
 </dd>
 <dt id="main.translate"><code class="name flex">
@@ -289,16 +328,14 @@ def main_without_translate(*args, **kwargs):
     try:
         if word_eng is None:
             raise ValueError(&#34;The word to translate cannot be None&#34;)
-
         translated = GoogleTranslator(source=&#39;auto&#39;, target=language).translate(word_eng)
         return translated
-
     except ValueError as ve:
         print(f&#34;An error occurred: {ve}&#34;)
-        return None
+        return
     except Exception as e:
         print(f&#34;An unexpected error occurred: {e}&#34;)
-        return None</code></pre>
+        return</code></pre>
 </details>
 </dd>
 </dl>
@@ -318,6 +355,7 @@ def main_without_translate(*args, **kwargs):
 <li><code><a title="main.create_unique_words_set" href="#main.create_unique_words_set">create_unique_words_set</a></code></li>
 <li><code><a title="main.main_with_translate" href="#main.main_with_translate">main_with_translate</a></code></li>
 <li><code><a title="main.main_without_translate" href="#main.main_without_translate">main_without_translate</a></code></li>
+<li><code><a title="main.timed" href="#main.timed">timed</a></code></li>
 <li><code><a title="main.translate" href="#main.translate">translate</a></code></li>
 </ul>
 </li>

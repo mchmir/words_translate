@@ -1,8 +1,8 @@
 import string
+
 from functools import partial, wraps
 from re import match
 from time import perf_counter
-
 from deep_translator import GoogleTranslator
 
 
@@ -20,6 +20,7 @@ def timed(func):
         print(f"(with parameters {args}, {kwargs})")
         return result
     return wrap
+
 
 def translate(word_eng, language):
     """
@@ -41,7 +42,9 @@ def translate(word_eng, language):
         print(f"An unexpected error occurred: {e}")
         return
 
+
 translate_into_russian = partial(translate, language='ru')
+
 
 def clear_word(word):
     """
@@ -56,12 +59,13 @@ def clear_word(word):
     :return: (str) a clean word
     """
     word = word.strip(string.digits).strip(string.punctuation)
-    if all(
+    if all([
         len(word) > 3,
         word.isalpha(),
         all(letter in string.ascii_letters for letter in word)
-    ):
+    ]):
         return word
+
 
 def create_unique_words_set():
     """
@@ -98,9 +102,10 @@ def main_with_translate(flag_translate=True, unique_words_set=None):
             if len(word) > 3:
                 if flag_translate:
                     translated_word = translate_into_russian(word_eng=word)
-                    outfile.write(f"{word} - {translated_word} \n")
+                    outfile.write(f"{word} - {translated_word}\n")
                 else:
-                    outfile.write(f"{word} \n")
+                    outfile.write(f"{word}\n")
+
 
 def main_without_translate(unique_words_set=None):
     """Save unique words without translations to a new file"""
@@ -108,6 +113,7 @@ def main_without_translate(unique_words_set=None):
         flag_translate=False,
         unique_words_set=unique_words_set
     )
+
 
 if __name__ == "__main__":
     response = input('Do you want to use word translations? [Y/N]: ')
